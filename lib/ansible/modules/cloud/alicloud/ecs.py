@@ -24,22 +24,22 @@ ANSIBLE_METADATA = {'metadata_version': '1.0',
 DOCUMENTATION = '''
 ---
 module: ecs
-version_added: "2.4"
 short_description: Create, Start, Stop, Restart or Terminate an Instance in ECS. Add or Remove Instance to/from a Security Group.
 description:
     - Creates, starts, stops, restarts or terminates ecs instances.
     - Adds or removes ecs instances to/from security group.
+version_added: "2.4"
+author:
+    - "He Guimin (@xiaozhu36)"
+
 options:
     status:
       description:
         - The state of the instance after operating.
       required: false
-      default: 'present'
+      default: "present"
+      choices: [ "present", "pending", "running", "stopped", "restarted", "absent", "getinfo", "getstatus" ]
       aliases: ['state']
-      choices:
-        - [ 'present', 'pending', 'running', 'stopped', 'restarted', 'absent', 'getinfo', 'getstatus' ]
-        - map operation ['create', 'start', 'stop', 'restart', 'terminate', 'querying_instance', 'modify_attribute',
-                        'describe_status']
     alicloud_zone:
       description: Aliyun availability zone ID in which to launch the instance
       required: false
@@ -59,13 +59,11 @@ options:
       description: Security group id to use with the instance
       required: false
       default: null
-      aliases: []
     io_optimized:
       description: Whether instance is using optimized volumes.
       required: false
-      default: False
-      aliases: []
-      choices: ["True", "False"]
+      default: no
+      type: bool
     vswitch_id:
       description: The subnet ID in which to launch the instance (VPC).
       required: false
@@ -75,82 +73,129 @@ options:
       description: Private IP address of the instance, which cannot be specified separately.
       required: false
       default: null
-      aliases: []
     instance_name:
       description: Name of the instance to use.
       required: false
       default: null
-      aliases: []
     description:
       description: Description of the instance to use.
       required: false
       default: null
-      aliases: []
     internet_data:
       description:
         - A hash/dictionaries of internet to the new instance;
-        - >
-          '{"key":"value"}'; keys allowed:
-          - charge_type ( required:false;default: "PayByBandwidth", choices:["PayByBandwidth", "PayByTraffic"] )
-          - max_bandwidth_in(required:false, default:200)
-          - max_bandwidth_out(required:false, default:0).
-
       required: false
       default: null
-      aliases: []
+      suboptions:
+        charge_type:
+          description: 
+            - Internet charge type, which can be PayByTraffic or PayByBandwidth.
+          required: false
+          default: "PayByBandwidth"
+          choices: ["PayByBandwidth", "PayByTraffic"]
+        max_bandwidth_in:
+          description: 
+            - Maximum incoming bandwidth from the public network, measured in Mbps (Mega bit per second).
+          required: false
+          default: 200
+          choices: [1~200]
+        max_bandwidth_out:
+          description: 
+            - Maximum outgoing bandwidth to the public network, measured in Mbps (Mega bit per second).
+          required: false
+          default: 0
+          choices: [0~100]
     host_name:
       description: Instance host name.
       required: false
       default: null
-      aliases: []
     password:
       description: The password to login instance.
       required: false
       default: null
-      aliases: []
     system_disk:
       description:
         - A hash/dictionaries of system disk to the new instance;
-        - >
-          '{"key":"value"}'; keys allowed:
-          - disk_category (required:false; default: "cloud"; choices:["cloud", "cloud_efficiency", "cloud_ssd", "ephemeral_ssd"] )
-          - disk_size (required: false, default: max[40, ImageSize], choice: [40-500])
-          - disk_name (required: false, default: Null)
-          - disk_description (required:false; default:null)
       required: false
       default: null
-      aliases: []
+      suboptions:
+         disk_category:
+          description: 
+            - Category of the system disk
+          required: false
+          default: "cloud"
+          choices: ["cloud", "cloud_efficiency", "cloud_ssd", "ephemeral_ssd"]
+         disk_size:
+          description: 
+            - Size of the system disk, in GB
+          required: false
+          default: max[40, ImageSize]
+          choices: [40~500]
+         disk_name:
+          description: 
+            - Name of a system disk
+          required: false
+          default: null
+         disk_description:
+          description: 
+            - Description of a system disk
+          required: false
+          default: null 
     disks:
       description:
         - A list of hash/dictionaries of volumes to add to the new instance;
-        - >
-          '[{"key":"value", "key":"value"}]'; keys allowed:
-          - disk_category (required:false; default: "cloud"; choices:["cloud", "cloud_efficiency", "cloud_ssd", "ephemeral_ssd"] )
-          - disk_size (required:false; default:null; choices:depends on disk_category)
-          - disk_name (required: false; default:null)
-          - disk_description (required: false; default:null)
-          - delete_on_termination (required:false, default:"true")
-          - snapshot_id (required:false; default:null), volume_type (str), iops (int) - device_type is deprecated use
-                    volume_type, iops must be set when volume_type='io1', ephemeral and snapshot are mutually exclusive.
       required: false
       default: null
       aliases: [ 'volumes' ]
+      suboptions:
+         disk_category:
+          description: 
+            - Category of the system disk
+          required: false
+          default: "cloud"
+          choices: ["cloud", "cloud_efficiency", "cloud_ssd", "ephemeral_ssd"]
+         disk_size:
+          description: 
+            - Size of the system disk, in GB
+          required: false
+          default: null
+          choices: [depends on disk_category]
+         disk_name:
+          description: 
+            - Name of a system disk
+          required: false
+          default: null
+         disk_description:
+          description: 
+            - Description of a system disk
+          required: false
+          default: null
+         delete_on_termination:
+          description: 
+            - Whether a data disk is released with the instance
+          required: false
+          default: yes
+          type: bool
+         snapshot_id:
+          description: 
+            - Snapshot to use for creating the data disk. 
+          required: false
+          default: yes
+          type: bool 
     count:
       description: The number of the new instance.
       required: false
       default: 1
-      aliases: []
     allocate_public_ip:
       description: Whether allocate a public ip for the new instance.
       required: false
-      default: true
+      default: no
       aliases: [ 'assign_public_ip' ]
-      choices: ["true", "false"]
+      type: bool
     bind_eip:
       description: ID of Elastic IP Address bind to the new instance.
       required: false
       default: null
-      aliases: []
     ids:
       description:
         - A list of identifier for this instance or set of instances, so that the module will be idempotent with respect to ECS instances.
@@ -176,14 +221,14 @@ options:
       description:
         - Whether automate renew the charge of the instance.
       required: false
-      choices: [true, false]
-      default: false
+      default: no
+      type: bool
     auto_renew_period:
       description:
         - The duration of the automatic renew the charge of the instance. It is vaild when auto_renew is true.
       required: false
       choices: [1, 2, 3, 6, 12]
-      default: false
+      default: null
     instance_ids:
       description:
         - "A list of instance ids, currently used for states: running, stopped, restarted, absent,
@@ -196,7 +241,6 @@ options:
         - "Whether force to operation, currently used fo states: stopped and restarted."
       required: false
       default: False
-      aliases: []
     instance_tags:
       description:
         - A list of hash/dictionaries of instance tags, '[{tag_key:"value", tag_value:"value"}]',
@@ -207,21 +251,39 @@ options:
     attributes:
       description:
         - A list of hash/dictionaries of instance attributes. If it's set, the specified instance's attributes would be modified.
-        - keys allowed are
-            - id (required=true; default=null; description=ID of an ECS instance )
-            - name (required=false; default=null; description=Name of the instance to modify)
-            - description (required=false; default=null; description=Description of the instance to use)
-            - password (required=false; default=null; description=The password to login instance)
-            - host_name (required=false; default=null; description=Instance host name)
       required: false
       default: null
-      aliases: []
+      suboptions:
+        id:
+          description: 
+            - ID of an ECS instance
+          required: true
+          default: null
+        name:
+          description: 
+            - Name of the instance to modify
+          required: false
+          default: null
+        description:
+          description: 
+            - Description of the instance to use
+          required: false
+          default: null
+        password:
+          description: 
+            - The password to login instance
+          required: false
+          default: null
+        host_name:
+          description: 
+            - Instance host name
+          required: false
+          default: null
     sg_action:
       description: The action of operating security group.
       required: true
       default: null
       choices: ['join', 'leave']
-      aliases: []
     page_number:
       description: Page number of the instance status list
       required: false
@@ -234,15 +296,15 @@ options:
       description:
         - wait for the AMI to be in state 'available' before returning.
       required: false
-      default: "no"
-      choices: [ "yes", "no" ]
+      default: no
+      type: bool
     wait_timeout:
       description:
         - how long before wait gives up, in seconds
       required: false
       default: 300
-author:
-    - "He Guimin (@xiaozhu36)"
+extends_documentation_fragment:
+    - alicloud
 '''
 
 EXAMPLES = '''
@@ -572,6 +634,46 @@ EXAMPLES = '''
         instance_id: '{{ instance_id }}'
         group_id: '{{ group_id }}'
         sg_action: '{{ sg_action }}'
+'''
+
+RETURN = '''
+msg: 
+  description: It returns an error message 
+  returned: When error occurs 
+  type: string 
+  sample: footmark required for this module
+changed: 
+  description: Describe operation performed or not on alicloud 
+  returned: Always 
+  type: bool 
+result: 
+  description: It returns response from alicloud 
+  returned: When operation successfully performed 
+  type: string
+instance_id: 
+  description: It returns id of an ECS instance  
+  returned: When delete ECS instance operation successfully performed
+  type: string
+instance_ids: 
+  description: It returns id of an ECS instances  
+  returned: When start/stop/restart ECS instance operation successfully performed
+  type: list 
+instances: 
+  description: It returns details of an ECS instance  
+  returned: When start/stop/restart ECS instance operation successfully performed
+  type: dict
+group_id: 
+  description: It returns id of an Security Group
+  returned: When join/leave security group operation performed
+  type: string  
+success_instance_ids: 
+  description: It returns id of an ECS instances
+  returned: When join/leave security group operation successfully performed
+  type: list  
+failed_instance_ids: 
+  description: It returns id of an ECS instances  
+  returned: When join/leave security group operation failed
+  type: list    
 '''
 
 import time
